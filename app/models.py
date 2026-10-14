@@ -1,0 +1,57 @@
+from datetime import datetime
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from .extensions import db, login_manager
+
+class User(UserMixin, db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    full_name = db.Column(db.String(150), nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), nullable=False)   # teacher / student
+    group_name = db.Column(db.String(50))             # для студентов
+
+    tasks = db.relationship("Task", backref="teacher", lazy=True)
+    submissions = db.relationship("Submission", backref="student", lazy=True)
+
+    def set_password(self, p): self.password_hash = generate_password_hash(p)
+    def check_password(self, p): return check_password_hash(self.password_hash, p)
+
+
+class Subject(db.Model):
+    __tablename__ = "subjects"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    teacher_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+
+
+class Task(db.Model):
+    __tablename__ = "tasks"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"))
+    teacher_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    group_name = db.Column(db.String(50), nullable=False)
+    start_date = db.Column(db.Date, default=datetime.utcnow)
+    due_date = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    subject = db.relationship("Subject", backref="tasks")
+    submissions = db.relationship("Submission", backref="task",
+                                  lazy=True, cascade="all, delete-orphan")
+
+
+class Submission(db.Model):
+    __tablename__ = "submissions"
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    is_completed = db.Column(db.Boolean, default=False)
+    completed_at = db.Column(db.DateTime)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))

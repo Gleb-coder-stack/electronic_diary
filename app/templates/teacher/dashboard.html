@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2>Панель преподавателя</h2>
+  <a href="{{ url_for('teacher.create_task') }}" class="btn btn-primary">+ Создать задание</a>
+</div>
+
+<div class="stats-grid">
+  {% for t in tasks %}
+  <div class="stat-card">
+    <div class="stat-subject">{{ t.subject.name }}</div>
+    <div class="stat-title">{{ t.title }}</div>
+    <div class="stat-meta">
+      <span>Группа: {{ t.group_name }}</span>
+      <span>Срок: {{ t.due_date.strftime('%d.%m.%Y') }}</span>
+    </div>
+    <div class="progress">
+      <div class="progress-bar"
+           style="width: {{ (t.submissions | selectattr('is_completed') | list | length) * 100 // (t.submissions | length or 1) }}%"></div>
+    </div>
+    <div class="stat-footer">
+      Выполнено: {{ t.submissions | selectattr('is_completed') | list | length }} / {{ t.submissions | length }}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

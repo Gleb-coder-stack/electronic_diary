@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Мои задания</h2>
+<p class="welcome">Студент: {{ current_user.full_name }} ({{ current_user.group_name }})</p>
+
+<div class="legend">
+  <span class="dot red"></span> Не выполнено
+  <span class="dot green"></span> Выполнено
+</div>
+
+<div id="gantt-chart"></div>
+
+<table class="tasks-table">
+  <thead>
+    <tr>
+      <th>Предмет</th><th>Задание</th><th>Срок</th>
+      <th>Статус</th><th>Действие</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sub in submissions %}
+    <tr id="row-{{ sub.id }}">
+      <td>{{ sub.task.subject.name }}</td>
+      <td>{{ sub.task.title }}</td>
+      <td>{{ sub.task.due_date.strftime('%d.%m.%Y') }}</td>
+      <td class="status-cell">
+        {% if sub.is_completed %}
+          <span class="badge green">Выполнено</span>
+        {% else %}
+          <span class="badge red">Не выполнено</span>
+        {% endif %}
+      </td>
+      <td>
+        <button class="btn-toggle" data-id="{{ sub.id }}">
+          {% if sub.is_completed %}Отменить{% else %}Отметить{% endif %}
+        </button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>window.ganttData = {{ gantt_data | tojson }};</script>
+<script src="{{ url_for('static', filename='js/gantt.js') }}"></script>
+{% endblock %}
