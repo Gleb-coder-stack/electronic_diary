@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e6ed; }
+    .tab-btn { padding: 10px 20px; background: none; border: none; cursor: pointer; font-size: 16px; font-weight: 600; color: #7f8c8d; border-bottom: 3px solid transparent; transition: 0.2s; }
+    .tab-btn.active { color: #3498db; border-bottom-color: #3498db; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .admin-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    .schedule-day-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); padding: 15px; }
+    .schedule-item { padding: 10px 0; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center; }
+    .schedule-item:last-child { border-bottom: none; }
+    .schedule-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: #fff; margin-left: 5px; }
+    .bg-orange { background: #f39c12; }
+    .bg-blue { background: #3498db; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; display: inline-block; margin: 2px; }
+    .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .form-row > * { flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid #dce1e6; font-size: 14px; }
+    .form-row > select, .form-row > input { width: 100%; }
+</style>
+
+<h2>Панель администратора</h2>
+
+<div class="tabs">
+    <button class="tab-btn active" data-tab="schedule">Расписание</button>
+    <button class="tab-btn" data-tab="subjects">Предметы</button>
+    <button class="tab-btn" data-tab="teachers">Преподаватели</button>
+    <button class="tab-btn" data-tab="students">Студенты</button>
+    <button class="tab-btn" data-tab="groups">Группы</button>
+</div>
+
+<!-- ================= ВКЛАДКА 1: РАСПИСАНИЕ ================= -->
+<div id="tab-schedule" class="tab-content active">
+    <div class="admin-card">
+        <h3 style="margin-top:0;">Добавить занятие</h3>
+        <form method="POST" action="{{ url_for('admin.add_schedule') }}">
+            <div class="form-row">
+                <select name="group_name" required>
+                    {% for g in groups %}<option value="{{ g.name }}">{{ g.name }}</option>{% endfor %}
+                </select>
+                <select name="day" required>
+                    <option>Понедельник</option><option>Вторник</option><option>Среда</option><option>Четверг</option><option>Пятница</option>
+                </select>
+                <input type="number" name="lesson" min="1" max="5" placeholder="Пара (1-5)" required>
+            </div>
+            <div class="form-row">
+                <select name="subject" required style="flex: 2;">
+                    <option value="">Выберите предмет</option>
+                    {% for subj in all_subjects %}
+                        <option value="{{ subj.name }}">{{ subj.name }}</option>
+                    {% endfor %}
+                </select>
+                <select name="teacher" required style="flex: 2;">
+                    <option value="">Преподаватель</option>
+                    {% for t in all_teachers %}<option value="{{ t.full_name }}">{{ t.full_name }}</option>{% endfor %}
+                    <option value="Куратор">Куратор</option>
+                </select>
+                <input type="text" name="room" placeholder="Аудитория" style="flex: 1;">
+            </div>
+            <div class="form-row">
+                <select name="week_type" style="flex: 1;">
+                    <option value="Каждая">Каждая неделя</option>
+                    <option value="Верхняя">Верхняя неделя</option>
+                    <option value="Нижняя">Нижняя неделя</option>
+                </select>
+                <button type="submit" class="btn btn-primary" style="flex: 2;">Добавить в расписание</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="admin-card">
+        <h3 style="margin-top:0;">Фильтр расписания</h3>
+        <form method="GET" action="{{ url_for('admin.dashboard') }}" class="form-row" style="align-items: flex-end;">
+            <input type="hidden" name="tab" value="schedule">
+            <div style="flex: 1;">
+                <label style="font-size: 12px; color: #7f8c8d; display: block; margin-bottom: 4px;">Группа</label>
+                <select name="group" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                    <option value="">Все группы</option>
+                    {% for g in groups %}<option value="{{ g.name }}" {% if filter_group == g.name %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label style="font-size: 12px; color: #7f8c8d; display: block; margin-bottom: 4px;">Предмет</label>
+                <input type="text" name="subject" placeholder="Название" value="{{ filter_subject }}" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+            </div>
+            <div style="flex: 1;">
+                <label style="font-size: 12px; color: #7f8c8d; display: block; margin-bottom: 4px;">Неделя</label>
+                <select name="week" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                    <option value="">Все</option>
+                    <option value="Верхняя" {% if filter_week == 'Верхняя' %}selected{% endif %}>Верхняя</option>
+                    <option value="Нижняя" {% if filter_week == 'Нижняя' %}selected{% endif %}>Нижняя</option>
+                </select>
+            </div>
+            <div style="flex: 1; display: flex; gap: 10px;">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Применить</button>
+                <a href="{{ url_for('admin.dashboard', tab='schedule') }}" class="btn btn-secondary" style="width: 100%; text-align: center; line-height: 20px;">Сбросить</a>
+            </div>
+        </form>
+    </div>
+
+    {% set days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'] %}
+    <div class="grid-2">
+        {% for day in days %}
+        <div class="schedule-day-card">
+            <h4 style="margin-top: 0; border-bottom: 2px solid #f0f3f5; padding-bottom: 10px;">{{ day }}</h4>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                {% set day_schedules = schedules | selectattr('day_of_week', 'equalto', day) | list %}
+                {% if day_schedules %}
+                    {% for s in day_schedules %}
+                    <li class="schedule-item">
+                        <div>
+                            <strong>{{ s.lesson_number }}. {{ s.subject_name }}</strong>
+                            {% if s.week_type and s.week_type != 'Каждая' %}
+                                <span class="schedule-badge bg-orange">{{ s.week_type }}</span>
+                            {% endif %}
+                            <br>
+                            <span style="font-size: 12px; color: #7f8c8d;">{{ s.group_name }} | {{ s.teacher_name }} | {{ s.room }}</span>
+                        </div>
+                        <div>
+                            <form method="POST" action="{{ url_for('admin.delete_schedule', sch_id=s.id) }}" style="margin: 0;">
+                                <button type="submit" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 16px;">✖</button>
+                            </form>
+                        </div>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li style="color: #bdc3c7; font-style: italic; padding: 10px 0;">Нет занятий</li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ================= ВКЛАДКА 2: ПРЕДМЕТЫ ================= -->
+<div id="tab-subjects" class="tab-content">
+    <div class="admin-card" style="display: flex; gap: 20px; align-items: center; justify-content: space-between;">
+        <form method="POST" action="{{ url_for('admin.add_subject') }}" style="display: flex; gap: 10px; flex: 1;">
+            <input type="text" name="name" placeholder="Название предмета" required style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+            <button type="submit" class="btn btn-primary">Добавить</button>
+        </form>
+        <form method="GET" style="display: flex; gap: 10px;">
+            <input type="hidden" name="tab" value="subjects">
+            <select name="group" onchange="this.form.submit()" style="padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                <option value="">Все группы</option>
+                {% for g in groups %}
+                    <option value="{{ g.name }}" {% if filter_group == g.name %}selected{% endif %}>{{ g.name }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+    <div class="grid-2">
+        {% for subj in subjects %}
+        <div class="admin-card">
+            <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">{{ subj.name }}</div>
+            <div style="margin-bottom: 10px;">
+                {% if subj.teacher_ids_str %}
+                    {% for t_id in subj.teacher_ids_str.split(',') %}
+                        {% for u in all_teachers if u.id|string == t_id %}
+                            <span class="bg-blue">{{ u.full_name }}</span>
+                        {% endfor %}
+                    {% endfor %}
+                {% else %}
+                    <span style="color: #e74c3c; font-size: 13px;">Преподаватели не назначены</span>
+                {% endif %}
+            </div>
+            <form method="POST" action="{{ url_for('admin.assign_teachers', subject_id=subj.id) }}" style="display: flex; gap: 5px;">
+                <select name="teacher_ids" multiple style="flex: 1; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc;">
+                    {% for u in all_teachers %}
+                    <option value="{{ u.id }}" {% if subj.teacher_ids_str and u.id|string in subj.teacher_ids_str.split(',') %}selected{% endif %}>{{ u.full_name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-secondary" style="padding: 5px 10px;">Назначить</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ================= ВКЛАДКА 3: ПРЕПОДАВАТЕЛИ ================= -->
+<div id="tab-teachers" class="tab-content">
+    <div class="grid-2">
+        <!-- Форма добавления -->
+        <div class="admin-card">
+            <h3>Добавить преподавателя</h3>
+            <form method="POST" action="{{ url_for('admin.add_teacher') }}">
+                <div class="input-group"><input type="text" name="full_name" placeholder="ФИО Преподавателя" required style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px;"></div>
+                <div class="input-group"><input type="email" name="email" placeholder="Email" required style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px;"></div>
+                <div class="input-group"><input type="text" name="password" placeholder="Пароль" required style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px;"></div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Добавить</button>
+            </form>
+        </div>
+
+        <!-- Список преподавателей с кнопкой удаления -->
+        <div class="admin-card">
+            <h3>Список преподавателей</h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                {% for t in all_teachers %}
+                <li style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee;">
+                    <div>
+                        <div style="font-weight: 600;">{{ t.full_name }}</div>
+                        <div style="font-size: 12px; color: #7f8c8d;">{{ t.email }}</div>
+                    </div>
+                    <form method="POST" action="{{ url_for('admin.delete_user', user_id=t.id) }}" onsubmit="return confirm('Удалить преподавателя?');">
+                        <button type="submit" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 16px;">✖</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- ================= ВКЛАДКА 4: СТУДЕНТЫ ================= -->
+<div id="tab-students" class="tab-content">
+    <div class="grid-2">
+        <!-- Форма добавления -->
+        <div class="admin-card">
+            <h3>Добавить студента</h3>
+            <form method="POST" action="{{ url_for('admin.add_student') }}">
+                <div class="input-group"><input type="text" name="full_name" placeholder="ФИО Студента" required style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px;"></div>
+                <div class="input-group"><input type="email" name="email" placeholder="Email" required style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px;"></div>
+                <div class="input-group"><input type="text" name="password" placeholder="Пароль" required style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px;"></div>
+                <div class="input-group">
+                    <select name="group_id" required style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px;">
+                        {% for g in groups %}<option value="{{ g.id }}">{{ g.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Добавить студента</button>
+            </form>
+        </div>
+
+        <!-- Список студентов -->
+        <div class="admin-card">
+            <h3>Студенты в группах</h3>
+            {% for g in groups %}
+                <div style="margin-bottom: 15px;">
+                    <div style="font-weight: 600; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 5px;">{{ g.name }}</div>
+                    <ul style="list-style: none; padding: 0; margin: 5px 0 0 0; font-size: 13px;">
+                        {% for s in g.students %}
+                            <li style="padding: 5px 0; display: flex; justify-content: space-between; border-bottom: 1px dashed #f8fafc;">
+                                <span>{{ s.full_name }}</span>
+                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=s.id) }}" onsubmit="return confirm('Удалить студента?');">
+                                    <button type="submit" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 14px;">✖</button>
+                                </form>
+                            </li>
+                        {% else %}
+                            <li style="padding: 2px 0; font-style: italic; color: #7f8c8d;">Нет студентов</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ================= ВКЛАДКА 5: ГРУППЫ ================= -->
+<div id="tab-groups" class="tab-content">
+    <div class="admin-card" style="max-width: 500px; margin: 0 auto;">
+        <h3>Создать группу</h3>
+        <form method="POST" action="{{ url_for('admin.add_group') }}">
+            <div class="input-group">
+                <input type="text" name="group_name" placeholder="Например: ИСП.26А" required style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px;">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Создать группу</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.getAttribute('data-tab')).classList.add('active');
+            });
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab');
+        if (tab) {
+            const targetBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+            if (targetBtn) targetBtn.click();
+        }
+    });
+</script>
+{% endblock %}

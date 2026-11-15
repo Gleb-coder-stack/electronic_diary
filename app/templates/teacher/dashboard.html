@@ -5,23 +5,99 @@
   <a href="{{ url_for('teacher.create_task') }}" class="btn btn-primary">+ Создать задание</a>
 </div>
 
+<!-- Фильтры: Предмет и Неделя -->
+<div class="filter-bar" style="display: flex; gap: 15px; margin-bottom: 20px;">
+  <form method="GET" action="{{ url_for('teacher.dashboard') }}">
+    <select name="subject_id" onchange="this.form.submit()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #dce1e6;">
+      <option value="">Все предметы</option>
+      {% for subj in subjects %}
+        <option value="{{ subj.id }}" {% if current_subject|string == subj.id|string %}selected{% endif %}>
+          {{ subj.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+
+  <form method="GET" action="{{ url_for('teacher.dashboard') }}">
+    <select name="week" onchange="this.form.submit()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #dce1e6;">
+      <option value="">Все недели</option>
+      <option value="Верхняя" {% if current_week == 'Верхняя' %}selected{% endif %}>Верхняя неделя</option>
+      <option value="Нижняя" {% if current_week == 'Нижняя' %}selected{% endif %}>Нижняя неделя</option>
+    </select>
+  </form>
+</div>
+
 <div class="stats-grid">
-  {% for t in tasks %}
+  {% for item in task_data %}
   <div class="stat-card">
-    <div class="stat-subject">{{ t.subject.name }}</div>
-    <div class="stat-title">{{ t.title }}</div>
+    <div class="stat-subject">{{ item.task.subject.name }}</div>
+    <div class="stat-title">
+        {{ item.task.title }}
+        {% if item.task.week_type != 'Каждая' and item.task.week_type != none %}
+            <span class="badge" style="background: #f39c12; font-size: 10px;">{{ item.task.week_type }}</span>
+        {% endif %}
+    </div>
+
     <div class="stat-meta">
-      <span>Группа: {{ t.group_name }}</span>
-      <span>Срок: {{ t.due_date.strftime('%d.%m.%Y') }}</span>
+      <span>Группа: {{ item.task.group_name }}</span>
+      <span>Срок: {{ item.task.due_date.strftime('%d.%m.%Y') }}</span>
     </div>
+
     <div class="progress">
-      <div class="progress-bar"
-           style="width: {{ (t.submissions | selectattr('is_completed') | list | length) * 100 // (t.submissions | length or 1) }}%"></div>
+      <div class="progress-bar" style="width: {{ (item.completed_count) * 100 // (item.total_count or 1) }}%"></div>
     </div>
-    <div class="stat-footer">
-      Выполнено: {{ t.submissions | selectattr('is_completed') | list | length }} / {{ t.submissions | length }}
+
+    <div class="stat-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <span>Выполнено: {{ item.completed_count }} / {{ item.total_count }}</span>
+
+      <div style="display: flex; gap: 8px;">
+        <a href="{{ url_for('teacher.edit_task', task_id=item.task.id) }}" class="btn-icon" title="Редактировать" style="text-decoration: none; font-size: 16px;">✏️</a>
+
+        <form method="POST" action="{{ url_for('teacher.delete_task', task_id=item.task.id) }}" style="display:inline; margin: 0;" onsubmit="return confirm('Удалить это задание?');">
+          <button type="submit" class="btn-icon" title="Удалить" style="background: none; border: none; cursor: pointer; font-size: 16px;">🗑️</button>
+        </form>
+
+        <button class="btn-show-students" onclick="toggleStudents('students-{{ item.task.id }}', this)" style="background: none; border: none; color: #3498db; cursor: pointer; font-weight: 600;">
+          Подробнее ▾
+        </button>
+      </div>
+    </div>
+
+    <!-- Скрытый список студентов -->
+    <div class="students-list" id="students-{{ item.task.id }}" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #dce1e6;">
+      {% if item.students %}
+        {% for student in item.students %}
+          <div class="student-row" style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; border-bottom: 1px solid #f8fafc;">
+            <span class="student-name" style="color: #34495e;">{{ student.name }}</span>
+            {% if student.is_completed %}
+              <span class="student-status green" style="color: #27ae60; font-weight: 600;">✔ Сдал</span>
+            {% else %}
+              <span class="student-status red" style="color: #e74c3c; font-weight: 600;">✖ Не сдал</span>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <p style="color: #95a5a6; font-size: 13px;">В этой группе нет студентов.</p>
+      {% endif %}
     </div>
   </div>
+  {% else %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: #fff; border-radius: 12px; color: #7f8c8d;">
+        Нет заданий по выбранным фильтрам.
+    </div>
   {% endfor %}
 </div>
+
+<script>
+  function toggleStudents(id, btn) {
+    const list = document.getElementById(id);
+    if (list.style.display === "block") {
+      list.style.display = "none";
+      btn.innerHTML = "Подробнее ▾";
+    } else {
+      list.style.display = "block";
+      btn.innerHTML = "Скрыть ▴";
+    }
+  }
+</script>
 {% endblock %}

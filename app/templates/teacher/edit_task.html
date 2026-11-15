@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="form-card">
+  <h2>Редактировать задание</h2>
+  
+  <form method="POST" enctype="multipart/form-data" class="task-form">
+    <div class="input-group">
+      <label>Предмет</label>
+      <select name="subject_id" required>
+        {% for s in subjects %}
+          <option value="{{ s.id }}" {% if s.id == task.subject_id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div class="input-group">
+      <label>Название задания</label>
+      <input type="text" name="title" required value="{{ task.title }}">
+    </div>
+    
+    <div class="row">
+      <div class="input-group">
+        <label>Группа</label>
+        <input type="text" name="group_name" required value="{{ task.group_name }}">
+      </div>
+      <div class="input-group">
+        <label>Срок сдачи</label>
+        <input type="date" name="due_date" required value="{{ task.due_date.strftime('%Y-%m-%d') }}">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Заменить файл (если нужно)</label>
+      <input type="file" name="file">
+      {% if task.file_path %}
+        <p style="font-size: 12px; color: #7f8c8d; margin-top: 4px;">
+          Текущий файл: <strong>{{ task.file_path }}</strong>
+        </p>
+      {% endif %}
+    </div>
+    
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+      <a href="{{ url_for('teacher.dashboard') }}" class="btn btn-secondary">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

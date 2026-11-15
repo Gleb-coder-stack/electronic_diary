@@ -14,12 +14,14 @@ def create_app():
     from .auth.routes import auth_bp
     from .teacher.routes import teacher_bp
     from .student.routes import student_bp
+    from .admin.routes import admin_bp
     from .api.auth_api import auth_api_bp
     from .api.tasks_api import tasks_api_bp
     from .api.submissions_api import submissions_api_bp
     from .api.stats_api import stats_api_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(teacher_bp, url_prefix="/teacher")
     app.register_blueprint(student_bp, url_prefix="/student")
 

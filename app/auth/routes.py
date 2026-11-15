@@ -5,17 +5,30 @@ from ..models import User
 auth_bp = Blueprint("auth", __name__, template_folder="../templates/auth")
 
 
+@auth_bp.route("/")
+def index():
+    if current_user.is_authenticated:
+        return redirect(url_for(f"{current_user.role}.dashboard"))
+    return redirect(url_for("auth.login"))
+
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for(f"{current_user.role}.dashboard"))
 
     if request.method == "POST":
-        user = User.query.filter_by(email=request.form["email"]).first()
-        if user and user.check_password(request.form["password"]):
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+
+        user = User.query.filter_by(email=email).first()
+
+        if user and user.check_password(password):
             login_user(user)
+            # Убрали flash("Вы успешно вошли в систему", "success")
             return redirect(url_for(f"{user.role}.dashboard"))
-        flash("Неверный логин или пароль", "danger")
+        else:
+            flash("Неверный логин или пароль", "danger")  # Оставили только для ошибки
 
     return render_template("auth/login.html")
 

@@ -8,20 +8,48 @@
   <span class="dot green"></span> Выполнено
 </div>
 
-<div id="gantt-chart"></div>
+<!-- Фильтры: Предмет и Неделя -->
+<div class="filter-bar" style="display: flex; gap: 15px; margin-bottom: 20px;">
+  <form method="GET" action="{{ url_for('student.dashboard') }}">
+    <select name="subject_id" onchange="this.form.submit()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #dce1e6;">
+      <option value="">Все предметы</option>
+      {% for subj in subjects %}
+        <option value="{{ subj.id }}" {% if current_subject|string == subj.id|string %}selected{% endif %}>
+          {{ subj.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+
+  <form method="GET" action="{{ url_for('student.dashboard') }}">
+    <select name="week" onchange="this.form.submit()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #dce1e6;">
+      <option value="">Все недели</option>
+      <option value="Верхняя" {% if current_week == 'Верхняя' %}selected{% endif %}>Верхняя неделя</option>
+      <option value="Нижняя" {% if current_week == 'Нижняя' %}selected{% endif %}>Нижняя неделя</option>
+    </select>
+  </form>
+</div>
 
 <table class="tasks-table">
   <thead>
     <tr>
-      <th>Предмет</th><th>Задание</th><th>Срок</th>
-      <th>Статус</th><th>Действие</th>
+      <th>Предмет</th>
+      <th>Задание</th>
+      <th>Срок</th>
+      <th>Статус</th>
+      <th>Действие</th>
     </tr>
   </thead>
   <tbody>
     {% for sub in submissions %}
     <tr id="row-{{ sub.id }}">
       <td>{{ sub.task.subject.name }}</td>
-      <td>{{ sub.task.title }}</td>
+      <td>
+        {{ sub.task.title }}
+        {% if sub.task.week_type != 'Каждая' and sub.task.week_type != none %}
+            <span class="badge" style="background: #f39c12; font-size: 10px;">{{ sub.task.week_type }}</span>
+        {% endif %}
+      </td>
       <td>{{ sub.task.due_date.strftime('%d.%m.%Y') }}</td>
       <td class="status-cell">
         {% if sub.is_completed %}
@@ -31,15 +59,40 @@
         {% endif %}
       </td>
       <td>
-        <button class="btn-toggle" data-id="{{ sub.id }}">
-          {% if sub.is_completed %}Отменить{% else %}Отметить{% endif %}
-        </button>
+        <div class="action-buttons">
+          <button class="btn-toggle" data-id="{{ sub.id }}">
+            {% if sub.is_completed %}Отменить{% else %}Отметить{% endif %}
+          </button>
+          {% if sub.task.file_path %}
+            <a href="{{ url_for('student.download_file', filename=sub.task.file_path) }}" class="btn-download" title="Скачать файл">
+              📎 Скачать
+            </a>
+          {% endif %}
+        </div>
       </td>
+    </tr>
+    {% else %}
+    <tr>
+        <td colspan="5" style="text-align: center; padding: 20px; color: #7f8c8d;">Нет заданий по выбранным фильтрам</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 
-<script>window.ganttData = {{ gantt_data | tojson }};</script>
+<!-- Контейнер для диаграммы -->
+<div class="gantt-container" style="margin-top: 30px;">
+  <div id="chartdiv" style="width: 100%; height: 400px;"></div>
+</div>
+
+<!-- Скрипты для диаграммы -->
+<script src="{{ url_for('static', filename='vendor/index.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/xy.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/gantt.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/Animated.js') }}"></script>
+
+<script>
+  // Передаем данные из Python в JS
+  window.ganttData = {{ gantt_data | tojson }};
+</script>
 <script src="{{ url_for('static', filename='js/gantt.js') }}"></script>
 {% endblock %}
